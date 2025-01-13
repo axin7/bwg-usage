@@ -3,6 +3,14 @@ import { VPSData } from '@/types';
 
 const API_BASE = 'https://api.64clouds.com/v1';
 
+interface VPSBasicInfo {
+  hostname: string;
+  node_location: string;
+  os: string;
+  ip_addresses: string[];
+  vm_type?: string;
+}
+
 function transformData(rawData: any): VPSData {
   const resetDate = new Date(rawData.data_next_reset * 1000);
   
