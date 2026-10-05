@@ -1,6 +1,16 @@
 {
   "name": "bwg-usage",
   "version": "0.1.0",
+  "description": "A self-hosted BandwagonHost VPS resource, traffic, and operations dashboard.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/axin7/bwg-usage.git"
+  },
+  "homepage": "https://bwg-usage.vercel.app/",
+  "bugs": {
+    "url": "https://github.com/axin7/bwg-usage/issues"
+  },
   "private": true,
   "type": "module",
   "packageManager": "pnpm@10.13.1",
@@ -23,7 +33,7 @@
     "build": "vite build",
     "start": "node .output/server/index.mjs",
     "preview": "vite preview --host 127.0.0.1",
-    "build:vercel": "NITRO_PRESET=vercel vite build",
+    "build:vercel": "vite build --mode vercel",
     "verify:vercel": "node scripts/verify-vercel.mjs",
     "check:compat": "vinext check",
     "lint": "eslint . --max-warnings 0",

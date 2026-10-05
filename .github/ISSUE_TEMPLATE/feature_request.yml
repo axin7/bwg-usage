@@ -1,0 +1,23 @@
+name: 功能建议
+description: 描述实际使用需求与期望的改进。
+title: "[Feature] "
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 使用场景与问题
+      description: 哪项工作难以完成？目前如何处理？请勿提交凭证或其他敏感信息。
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 建议方案
+      description: 期望怎样操作，获得什么结果？
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 替代方案或补充信息
+      description: 可提供考虑过的替代办法或已脱敏的示意图。

@@ -1,5 +1,8 @@
 # bwg-usage 项目全面分析与改进方案
 
+历史审查资料，各项证据对应文中日期与提交，不代表当前配置要求。
+当前功能与部署方式见 [README](../README.md) 和 [部署说明](DEPLOYMENT.md)。
+
 审查日期：2026-10-05。审查基线：`c9369b8`。第 1–11 节记录改造前的证据与方案。
 后续用户授权实施，选定 React 最新版、vinext 和 Vercel；实施进度见第 12 节。
 
@@ -409,7 +412,7 @@ TypeSafe API 请求，检查并保存结果。API 调用失败或证据不足，
 
 | 项目 | 已实施结果 | 验证或限制 |
 | --- | --- | --- |
-| A01 | React/DOM/RSC 19.3.0、vinext 1.0.1、Vite 8.3.2、HeroUI 2.8.10 | Node 与 Vercel 构建；Nitro 为 beta |
+| A01 | React/DOM/RSC 19.3.0、vinext 1.0.1、Vite 8.3.2、HeroUI 2.8.10 | Node/Vercel 构建；Nitro 为 beta |
 | A02 | pnpm 锁文件、Node 22、实际 ESLint、类型检查与统一检查命令 | 冻结安装与完整检查通过 |
 | A03 | JSON/类型/长度/动作白名单、请求体上限、固定 HTTPS 表单 POST | 非法输入和编码契约测试 |
 | A04 | 校验供应商字段，数值未知用 null，拒绝非有限数字 | 异常样本与 DTO 契约测试 |
@@ -431,7 +434,7 @@ TypeSafe API 请求，检查并保存结果。API 调用失败或证据不足，
 ### 12.2 官方契约核对
 
 已在登录浏览器中核对 KiwiVM API 菜单，不复制或展示真实 API Key：
-https://kiwivm.64clouds.com/745491/main-exec.php?mode=api
+通用入口为 https://kiwivm.64clouds.com/，登录自己的 VPS 后进入 API 菜单。
 
 - `plan_monthly_data` 与 `data_counter` 都乘 `monthly_data_multiplier`，缺失倍率取 1。
 - 重置时间为 Unix 时间；没有权威周期开始字段，日均只能标为估算。

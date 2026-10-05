@@ -1,6 +1,8 @@
 import { mkdir, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
-export const EVIDENCE_DIR = '/tmp/bwg-usage-validation';
+export const EVIDENCE_DIR = join(tmpdir(), 'bwg-usage-validation');
 
 async function requestJudgment(acceptance, evidence) {
   if (!process.env.TYPESAFE_API_KEY) throw new Error('TYPESAFE_API_KEY is required');
@@ -47,6 +49,10 @@ export async function verifyCase(name, acceptance, evidence) {
 }
 
 function browserFixture() {
+    if (window.__bwgMock?.syntheticDocument !== true
+      && document.querySelector('[role=tablist][aria-label="VPS 数据视图"]')) {
+      throw new Error('Install synthetic fixtures before connecting the dashboard.');
+    }
     const fixture = {
       basic: { hostname: 'test-vps', node_location: 'Los Angeles', os: 'Debian 12',
         ip_addresses: ['192.0.2.1', '2001:db8:1234:5678:9012:3456:7890:abcd'] },
@@ -57,7 +63,8 @@ function browserFixture() {
         suspended: false, policy_violation: false, powerState: 'unknown' },
       observedAt: new Date().toISOString(),
     };
-    window.__bwgMock = { fixture, infoMode: 'success', actionMode: 'accepted',
+    window.__bwgMock = { syntheticDocument: true, fixture,
+      infoMode: 'success', actionMode: 'accepted',
       infoCount: 0, liveCount: 0, actionCount: 0, loginCount: 0, calls: [] };
 }
 
@@ -114,6 +121,10 @@ export async function installPreload(page) {
 
 export async function pageEvidence(page) {
   return page.evaluate(() => {
+    if (window.__bwgMock?.syntheticDocument !== true
+      && document.querySelector('[role=tablist][aria-label="VPS 数据视图"]')) {
+      throw new Error('Use synthetic fixtures before collecting connected dashboard evidence.');
+    }
     const visible = (element) => element.getClientRects().length > 0
       && getComputedStyle(element).visibility !== 'hidden';
     const viewport = { width: innerWidth, height: innerHeight };

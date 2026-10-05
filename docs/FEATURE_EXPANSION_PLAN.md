@@ -1,5 +1,8 @@
 # 个人 VPS 运维面板功能扩展方案
 
+历史设计资料，包含尚未实施的候选功能。当前行为与部署要求见
+[README](../README.md) 和 [部署说明](DEPLOYMENT.md)。
+
 日期：2026-10-05。基于当前 React 19.3、vinext、Vercel 与 KiwiVM 官方 API。
 当前按单用户、单台 VPS 设计。本批开发范围已调整为 F01 资源概览、
 F03 操作记录与 F04 原始流量趋势（含表格、CSV），验证结果以 README 为准。
@@ -227,8 +230,8 @@ M3/M4 各自发布，完整范围约 15–24 人日，估计包含定向测试�
 
 ## 7. 外部依据与尚未确定的事项
 
-- KiwiVM 官方入口：https://kiwivm.64clouds.com/745491/main.php
-- 已登录核对的 API 文档：https://kiwivm.64clouds.com/745491/main-exec.php?mode=api
+- KiwiVM 官方入口：https://kiwivm.64clouds.com/
+- API 文档：登录自己的 VPS 后进入 API 菜单。
 - 通知偏好接口：`kiwivm/getNotificationPreferences`、`kiwivm/setNotificationPreferences`。
 - Vercel Cron 套餐限制：https://vercel.com/docs/cron-jobs/usage-and-pricing
 - Vercel Cron 运行行为：https://vercel.com/docs/cron-jobs/manage-cron-jobs
