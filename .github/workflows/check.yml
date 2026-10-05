@@ -23,5 +23,10 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm check
+      - run: pnpm build
+        env:
+          WORKERS_CI: '1'
+      - run: pnpm verify:cloudflare
+      - run: pnpm run deploy --dry-run
       - run: pnpm build:vercel
       - run: pnpm verify:vercel

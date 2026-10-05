@@ -7,8 +7,12 @@
 
 **[在线体验：bwg-usage.vercel.app](https://bwg-usage.vercel.app/)**
 
+[![Deploy to Vercel][vercel-button]][vercel-deploy]
+[![Deploy to Cloudflare][cloudflare-button]][cloudflare-deploy]
+
 可自行部署的搬瓦工 VPS 资源、流量与操作记录面板。
-使用 React 19.3、vinext 1.0.1、TypeScript、HeroUI、Vite/Nitro，支持 Vercel 和 Node 服务。
+使用 React 19.3、vinext 1.0.1、TypeScript、HeroUI、Vite/Nitro，
+支持 Vercel、Cloudflare Workers 和独立 Node 服务。
 
 默认无需数据库、Redis 或环境变量，打开后填写自己的 VEID 与 API Key 即可连接。
 API Key 会经过面板服务端调用 KiwiVM，请部署自己的实例或只使用可信的实例。
@@ -61,9 +65,13 @@ pnpm dev
 ## 部署
 
 可先通过 [在线面板](https://bwg-usage.vercel.app/) 查看界面或用自己的凭证连接测试。
-在 Vercel 导入自己的仓库，选择 **Other** 框架预设和 **Node.js 22.x**，
-使用仓库 `vercel.json` 的安装与构建配置。默认浏览器模式无需环境变量。
-密码保护、固定目标、Redis、Preview 和独立 Node 服务见 [部署说明](docs/DEPLOYMENT.md)。
+点击顶部部署按钮，登录对应平台并连接 Git 账号，确认新仓库和项目名称后部署。
+Vercel 使用仓库的 `vercel.json`；Cloudflare 部署为 **Workers**，使用 `wrangler.jsonc`。
+默认浏览器模式无需 VPS 密钥、面板密码、数据库或 Redis，部署后在页面填写凭证即可。
+
+一键部署需要平台可读取的源码。当前源仓库仍为 Private；公开前，
+拥有访问权的账号可手动导入，公共用户的一键部署入口须等仓库公开后才可使用。
+手动部署、密码保护、固定目标、Redis 与各平台配置见 [部署说明](docs/DEPLOYMENT.md)。
 
 | 命令 | 用途 |
 | --- | --- |
@@ -72,8 +80,11 @@ pnpm dev
 | `pnpm build` / `pnpm start` | 构建并运行独立 Node 服务 |
 | `pnpm build:vercel` | 生成 Vercel Build Output |
 | `pnpm verify:vercel` | 对已构建的 Vercel 产物执行离线集成验证 |
+| `pnpm build:cloudflare` | 生成 Cloudflare Workers 产物 |
+| `pnpm verify:cloudflare` | 对已构建的 Worker 执行离线集成验证 |
+| `pnpm deploy:cloudflare` | 构建并通过 Wrangler 部署 Worker |
 
-两种生产构建都包含服务端 API，不能作为纯静态站点发布。
+三种生产构建都包含服务端 API，不能作为纯静态站点或 Cloudflare Pages 静态目录发布。
 `pnpm start` 不自动读取 `.env.local`，平台环境配置和本地 Node 启动方式见部署说明。
 测试和集成验证使用模拟上游，不操作真实 VPS。
 
@@ -113,3 +124,7 @@ pnpm dev
 [ci-badge]: https://github.com/axin7/bwg-usage/actions/workflows/check.yml/badge.svg
 [ci]: https://github.com/axin7/bwg-usage/actions/workflows/check.yml
 [license-badge]: https://img.shields.io/badge/License-MIT-green.svg
+[vercel-button]: https://vercel.com/button
+[vercel-deploy]: https://vercel.com/new/clone?repository-url=https://github.com/axin7/bwg-usage
+[cloudflare-button]: https://deploy.workers.cloudflare.com/button
+[cloudflare-deploy]: https://deploy.workers.cloudflare.com/?url=https://github.com/axin7/bwg-usage

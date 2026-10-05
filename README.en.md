@@ -7,9 +7,12 @@
 
 **[Live Demo: bwg-usage.vercel.app](https://bwg-usage.vercel.app/)**
 
+[![Deploy to Vercel][vercel-button]][vercel-deploy]
+[![Deploy to Cloudflare][cloudflare-button]][cloudflare-deploy]
+
 A self-hosted BandwagonHost VPS resource, traffic, and operations dashboard.
 Built with React 19.3, vinext 1.0.1, TypeScript, HeroUI, and Vite/Nitro.
-Deploy to Vercel or run as a Node service.
+Deploy to Vercel, Cloudflare Workers, or run as a Node service.
 The application interface is currently in Simplified Chinese.
 
 The default mode needs no database, Redis, or environment variables.
@@ -66,9 +69,16 @@ disconnected in the same tab. Clearing saved credentials does not revoke the pro
 ## Deployment
 
 Open the [live panel](https://bwg-usage.vercel.app/) to inspect the interface or test with your own
-credentials. To self-host, import your fork into Vercel, select **Other** and **Node.js 22.x**,
-and use `vercel.json`. The default browser-managed mode requires no environment variables.
-The output includes server-side APIs; this is not a static site.
+credentials. Click a deployment button above, sign in to the platform, connect your Git account,
+then confirm the new repository and project names to deploy your own instance.
+Vercel uses `vercel.json`; Cloudflare deploys a **Worker** using `wrangler.jsonc`.
+The default browser-managed mode needs no secrets, database, Redis, or environment variables.
+Enter your VPS credentials in the deployed application.
+
+Deployment buttons need a source repository that the platform can read. The source repository
+is currently private; public deployment from these buttons becomes available after publication.
+Accounts with repository access can use the manual import instructions meanwhile.
+The output includes server-side APIs and cannot be hosted as static Cloudflare Pages.
 
 For password protection, set `APP_ORIGIN`, `PANEL_PASSWORD`, and `SESSION_SECRET` together.
 The origin must be a full HTTPS origin without a path or trailing slash.
@@ -79,8 +89,10 @@ Redis is optional; its REST URL and token must be configured together.
 Do not prefix secrets with `VITE_` or `NEXT_PUBLIC_`.
 
 For a standalone Node service, run `pnpm build` followed by `pnpm start`.
+For Cloudflare, `pnpm build:cloudflare` builds the Worker and `pnpm deploy:cloudflare`
+builds and deploys it using Wrangler. Authenticate your Cloudflare account for CLI deployment.
 The production server does not automatically load `.env.local`.
-Detailed environment, Preview, startup, and troubleshooting instructions are in
+Detailed platform, environment, Preview, startup, and troubleshooting instructions are in
 the [deployment guide](docs/DEPLOYMENT.md) (Chinese).
 
 ## Validation
@@ -89,9 +101,11 @@ the [deployment guide](docs/DEPLOYMENT.md) (Chinese).
 pnpm check
 pnpm build:vercel
 pnpm verify:vercel
+pnpm build:cloudflare
+pnpm verify:cloudflare
 ```
 
-Checks run ESLint, TypeScript, Vitest, the Node build, and compiled Vercel integration tests.
+Checks run ESLint, TypeScript, Vitest, the Node build, and compiled platform integration tests.
 Tests use mock providers and do not operate a real VPS or require real credentials.
 
 ## Data and Security
@@ -118,3 +132,7 @@ Third-party dependencies retain their own licenses.
 [ci-badge]: https://github.com/axin7/bwg-usage/actions/workflows/check.yml/badge.svg
 [ci]: https://github.com/axin7/bwg-usage/actions/workflows/check.yml
 [license-badge]: https://img.shields.io/badge/License-MIT-green.svg
+[vercel-button]: https://vercel.com/button
+[vercel-deploy]: https://vercel.com/new/clone?repository-url=https://github.com/axin7/bwg-usage
+[cloudflare-button]: https://deploy.workers.cloudflare.com/button
+[cloudflare-deploy]: https://deploy.workers.cloudflare.com/?url=https://github.com/axin7/bwg-usage

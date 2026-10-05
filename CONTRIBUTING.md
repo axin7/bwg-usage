@@ -34,6 +34,9 @@ pnpm dev
 
 采用 React 与 vinext 的 App Router，Vite/Nitro 负责构建和服务端运行。
 不要将本项目配置为标准 Next.js 构建，也不要把 API 产物作为静态站点部署。
+Vercel 使用 `vercel.json`，Cloudflare Workers 使用 `wrangler.jsonc`。
+普通构建生成 Node 服务；Workers Builds 环境自动选择 Worker，
+其他环境通过 `build:cloudflare` 明确选择。平台产物不能混用。
 
 ## 改动约定
 
@@ -53,15 +56,19 @@ pnpm dev
 pnpm check
 pnpm build:vercel
 pnpm verify:vercel
+pnpm build:cloudflare
+pnpm verify:cloudflare
 ```
 
 `pnpm check` 包含 ESLint、类型检查、Vitest 与 Node 生产构建。
 `verify:vercel` 读取已经构建的 Vercel 产物；须先执行 `build:vercel`。
-CI 对分支推送和 PR 执行同样的检查，不需要仓库 Secrets 或真实上游凭证。
+`verify:cloudflare` 读取已经构建的 Worker 产物；须先执行 `build:cloudflare`。
+部署配置改动还须检查 Workers Builds 的默认构建命令与 Wrangler 生成配置，
+无需实际发布 Worker。CI 对分支推送和 PR 执行相应检查，不需要真实上游凭证。
 
 浏览器验收使用 ego-browser；仓库证据脚本使用 TypeSafe API 判断验收条件。
 仅使用合成凭证和模拟响应，禁止将真实面板内容发送给外部验证服务。
-`TYPESAFE_API_KEY` 仅供验收进程使用，不是应用配置，也不应添加到 Vercel 环境变量。
+`TYPESAFE_API_KEY` 仅供验收进程使用，不是应用配置，不应添加到平台应用变量。
 普通测试和构建不需要该密钥。
 
 ## 提交 PR

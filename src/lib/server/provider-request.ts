@@ -57,7 +57,7 @@ function fetchOnce(context: Context): Promise<Response> {
     body,
     signal: context.signal,
     cache: 'no-store',
-    redirect: 'error',
+    redirect: 'manual',
   });
 }
 

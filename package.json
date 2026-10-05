@@ -19,7 +19,8 @@
   },
   "pnpm": {
     "onlyBuiltDependencies": [
-      "esbuild"
+      "esbuild",
+      "workerd"
     ],
     "ignoredBuiltDependencies": [
       "@heroui/shared-utils"
@@ -35,6 +36,11 @@
     "preview": "vite preview --host 127.0.0.1",
     "build:vercel": "vite build --mode vercel",
     "verify:vercel": "node scripts/verify-vercel.mjs",
+    "build:cloudflare": "vite build --mode cloudflare",
+    "verify:cloudflare": "node scripts/verify-cloudflare.mjs",
+    "deploy": "wrangler deploy",
+    "deploy:cloudflare": "pnpm build:cloudflare && pnpm run deploy",
+    "preview:cloudflare": "wrangler dev --local --local-protocol https",
     "check:compat": "vinext check",
     "lint": "eslint . --max-warnings 0",
     "typecheck": "tsc --noEmit",
@@ -69,11 +75,13 @@
     "eslint": "10.12.0",
     "eslint-plugin-react-hooks": "7.1.1",
     "jsdom": "29.1.1",
+    "miniflare": "5.20261001.0-alpha",
     "nitro": "3.0.260903-beta",
     "tailwindcss": "4.3.3",
     "typescript": "5.9.3",
     "typescript-eslint": "8.71.0",
     "vite": "8.3.2",
-    "vitest": "5.0.3"
+    "vitest": "5.0.3",
+    "wrangler": "4.147.0"
   }
 }

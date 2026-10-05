@@ -15,7 +15,7 @@ describe('bounded provider requests', () => {
     const [url, options] = fetcher.mock.calls[0];
     expect(url).toBe('https://api.64clouds.com/v1/getServiceInfo');
     expect(String(url)).not.toContain(CREDENTIALS.apiKey);
-    expect(options).toMatchObject({ method: 'POST', cache: 'no-store', redirect: 'error' });
+    expect(options).toMatchObject({ method: 'POST', cache: 'no-store', redirect: 'manual' });
     const body = new URLSearchParams(String(options?.body));
     expect(body.get('api_key')).toBe(CREDENTIALS.apiKey);
     expect(data.resources.usedBytes).toBe(10);
@@ -67,6 +67,19 @@ describe('basic read recovery', () => {
 });
 
 describe('provider response validation', () => {
+  it.each([301, 302, 303, 307, 308])(
+    'rejects HTTP %s without retrying or following a credential redirect', async (status) => {
+      const location = `https://other.example.com/?api_key=${CREDENTIALS.apiKey}`;
+      const fetcher = vi.fn<typeof fetch>().mockResolvedValue(Response.json(SUCCESS, {
+        status, headers: { Location: location },
+      }));
+      await expect(requestProvider('getServiceInfo', CREDENTIALS, false, { fetcher }))
+        .rejects.toMatchObject({ status: 502, code: 'UPSTREAM_UNAVAILABLE' });
+      expect(fetcher).toHaveBeenCalledTimes(1);
+      expect(fetcher.mock.calls[0][1]?.redirect).toBe('manual');
+    },
+  );
+
   it.each([null, [], { data_counter: 10 }, { error: 'bad' }, { error: 0.5 }])(
     'rejects invalid provider envelopes: %j', async (payload) => {
       const fetcher = vi.fn<typeof fetch>().mockResolvedValue(reply(payload));
@@ -85,6 +98,19 @@ describe('provider response validation', () => {
 });
 
 describe('management outcome protection', () => {
+  it.each([301, 302, 303, 307, 308])(
+    'keeps a redirected HTTP %s management outcome unknown without resending', async (status) => {
+      const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response('', {
+        status, headers: { Location: 'https://other.example.com/action' },
+      }));
+      await expect(submitVPSAction('restart', CREDENTIALS, { fetcher })).rejects.toMatchObject({
+        status: 502, code: 'UPSTREAM_UNAVAILABLE', outcome: 'unknown',
+      });
+      expect(fetcher).toHaveBeenCalledTimes(1);
+      expect(fetcher.mock.calls[0][1]?.redirect).toBe('manual');
+    },
+  );
+
   it('bounds a stalled action and dispatches it exactly once', async () => {
     vi.useFakeTimers();
     const fetcher = vi.fn<typeof fetch>().mockImplementation(() => new Promise(() => {}));
