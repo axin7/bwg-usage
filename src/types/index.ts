@@ -1,7 +1,12 @@
+import type { VPSSystemData } from './resources';
+
 export interface VPSCredentials {
   veid: string;
   apiKey: string;
 }
+
+export type VPSAction = 'start' | 'stop' | 'restart';
+export type VPSPowerState = 'running' | 'stopped' | 'starting' | 'unknown';
 
 export interface VPSData {
   basic: {
@@ -10,28 +15,38 @@ export interface VPSData {
     os: string;
     ip_addresses: string[];
     vm_type?: string;
-    node_datacenter?: string;
   };
   resources: {
-    totalGB: string | number;
-    usedGB: string | number;
-    percentUsed: number;
-    plan_disk: number;
-    plan_ram: number;
-    plan_swap: number;
-    plan?: string;
+    totalBytes: number | null;
+    usedBytes: number;
+    remainingBytes: number | null;
+    percentUsed: number | null;
   };
   status: {
-    resetDate: string;
-    daysRemaining: string | number;
-    dailyAverage: string | number;
-    suspended?: boolean;
-    policy_violation?: boolean;
+    resetAt: string | null;
+    daysRemaining: number | null;
+    dailyAverageBytes: number | null;
+    averageIsEstimate: boolean;
+    suspended: boolean | null;
+    policy_violation: boolean | null;
+    powerState: VPSPowerState;
   };
-  network?: {
-    location_ipv6_ready: boolean;
-    plan_private_network_available: boolean;
-    location_private_network_available: boolean;
-    rdns_api_available: boolean;
+  observedAt: string;
+  system?: VPSSystemData;
+}
+
+export interface ActionReceipt {
+  action: VPSAction;
+  accepted: true;
+  requestId: string;
+  historyWarning?: string;
+}
+
+export interface ApiErrorBody {
+  error: {
+    code: string;
+    message: string;
+    requestId: string;
+    outcome?: 'unknown' | 'rejected';
   };
-} 
+}

@@ -1,6 +1,6 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@config "../../tailwind.config.cjs";
+@source "../../node_modules/@heroui/theme/dist/**/*.{js,ts,jsx,tsx}";
 
 @layer base {
   :root {
@@ -30,6 +30,18 @@
     -webkit-font-smoothing: antialiased;
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
+    letter-spacing: 0;
+  }
+}
+
+button, input {
+  border-radius: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
   }
 }
 
@@ -51,5 +63,3 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #9ca3af;
 }
-
-/* ... 其他全局样式 ... */ 

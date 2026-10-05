@@ -1,14 +1,11 @@
-'use client'
+'use client';
 
-import { NextUIProvider } from '@nextui-org/react'
-import { ThemeProvider as NextThemesProvider } from "next-themes"
+import { HeroUIProvider } from '@heroui/react';
+import { MotionConfig } from 'framer-motion';
+import type { ReactNode } from 'react';
 
-export function Providers({ children }: { children: React.ReactNode }) {
-  return (
-    <NextUIProvider>
-      <NextThemesProvider attribute="class" defaultTheme="light">
-        {children}
-      </NextThemesProvider>
-    </NextUIProvider>
-  )
-} 
+export function Providers({ children }: { children: ReactNode }) {
+  return <MotionConfig reducedMotion="user">
+    <HeroUIProvider>{children}</HeroUIProvider>
+  </MotionConfig>;
+}

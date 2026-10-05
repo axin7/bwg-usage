@@ -1,11 +1,8 @@
 import { Providers } from "./providers";
-import { Inter } from 'next/font/google';
-import type { Metadata } from 'next';
+import type { ReactNode } from 'react';
 import './globals.css';
 
-const inter = Inter({ subsets: ['latin'] });
-
-export const metadata: Metadata = {
+export const metadata = {
   title: 'VPS 控制面板',
   description: 'VPS Traffic Monitoring Dashboard',
 };
@@ -13,15 +10,15 @@ export const metadata: Metadata = {
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
-    <html lang="zh" suppressHydrationWarning>
-      <body className={inter.className} suppressHydrationWarning>
+    <html lang="zh-CN" className="light">
+      <body>
         <Providers>
           {children}
         </Providers>
       </body>
     </html>
   );
-} 
+}

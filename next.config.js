@@ -1,18 +1,20 @@
-/** @type {import('next').NextConfig} */
+import { securityHeaders } from './src/lib/security-headers.js';
+
+const headers = Object.entries(securityHeaders).map(([key, value]) => ({ key, value }));
+
 const nextConfig = {
   async headers() {
     return [
       {
-        source: '/api/:path*',
-        headers: [
-          { key: 'Access-Control-Allow-Credentials', value: 'true' },
-          { key: 'Access-Control-Allow-Origin', value: '*' },
-          { key: 'Access-Control-Allow-Methods', value: 'GET,POST,OPTIONS' },
-          { key: 'Access-Control-Allow-Headers', value: 'Content-Type' },
-        ],
+        source: '/:path*',
+        headers,
       },
+      ...['/', '/login'].map((source) => ({
+        source,
+        headers: [...headers, { key: 'Cache-Control', value: 'private, no-store' }],
+      })),
     ];
   },
 };
 
-export default nextConfig; 
+export default nextConfig;
