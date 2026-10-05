@@ -33,11 +33,13 @@ async function validateConfiguration(
 
 function disconnectSession(
   session: VPSSession, reads: VPSReadController, pending: AbortController | null,
+  restoreSaved = false,
 ) {
   pending?.abort();
   reads.invalidate();
+  const stored = restoreSaved ? loadSavedCredentials() : null;
   session.commit({ credentials: null, initialData: null, editing: true, saving: false,
-    error: null, notice: null, stored: null, reuse: null,
+    error: null, notice: stored?.error ?? null, stored, reuse: null,
     revision: session.current.current.revision + 1,
     formRevision: session.current.current.formRevision + 1 });
 }
@@ -69,7 +71,7 @@ export function useVPSConfiguration(
     disconnectSession(session, reads, pending.current);
     session.commit({ notice: clearSavedCredentials() });
   }, [reads, session]);
-  const disconnect = () => disconnectSession(session, reads, pending.current);
+  const disconnect = () => disconnectSession(session, reads, pending.current, true);
   const edit = () => {
     if (session.current.current.serverConfigured || isManagementPending()) return;
     reads.pause();

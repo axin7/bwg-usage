@@ -111,13 +111,13 @@ describe('development loopback exceptions', () => {
     const request = panelRequest(undefined, {
       'x-forwarded-host': 'localhost', forwarded: 'host=localhost;proto=http',
     });
-    await expect(createGuard({ NODE_ENV: 'development' })(request))
-      .rejects.toMatchObject({ status: 503 });
+    await expect(createGuard({ ...PUBLIC_ENV, NODE_ENV: 'development' })(request))
+      .rejects.toMatchObject({ status: 401 });
   });
 
   it('never bypasses production authentication even on localhost', async () => {
-    await expect(createGuard({ NODE_ENV: 'production' })(new Request('http://localhost/')))
-      .rejects.toMatchObject({ status: 503 });
+    await expect(createGuard()(new Request('http://localhost/')))
+      .rejects.toMatchObject({ status: 403 });
   });
 });
 

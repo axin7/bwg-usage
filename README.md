@@ -39,38 +39,47 @@ Vercel 运行时由平台注入配置。
 导入仓库时使用 Other 框架预设，采用仓库 `vercel.json` 的安装和构建命令。
 使用 Node.js 22，不要配置 Next.js 的默认构建命令。
 
-在 Vercel 的对应 Production/Preview 环境设置以下变量，不加 `VITE_` 或 `NEXT_PUBLIC_` 前缀：
+默认无需环境变量或 Redis：打开面板后手动填写 VEID 与 API Key，验证成功后
+保存在当前浏览器。取消“在此设备保存”则只在当前页面内存中使用。
+浏览器模式不要求面板密码，API 每次从请求正文读取用户填写的 VPS 凭证。
+
+需要密码登录或服务端固定目标时，按下表配置对应 Production/Preview 环境。
+变量不加 `VITE_` 或 `NEXT_PUBLIC_` 前缀：
 
 | 变量 | 要求 |
 | --- | --- |
-| `APP_ORIGIN` | 面板的固定 HTTPS origin，例如 `https://panel.example.com`，不含路径 |
-| `PANEL_PASSWORD` | 16–1024 字符的面板登录密码 |
-| `SESSION_SECRET` | 至少 32 字符的随机会话签名密钥 |
-| `UPSTASH_REDIS_REST_URL` | Upstash Redis HTTPS REST URL |
-| `UPSTASH_REDIS_REST_TOKEN` | 上述 Redis 的 REST token，仅服务端使用 |
-| `BWG_VEID` | 推荐设置：固定管理的 VPS VEID |
-| `BWG_API_KEY` | 推荐设置：该 VPS 的 API Key，必须与 VEID 同时设置 |
+| `APP_ORIGIN` | 可选固定 HTTPS origin；启用登录时必填，不含路径或末尾 `/` |
+| `PANEL_PASSWORD` | 可选面板密码，16–1024 字符；须同时设置 origin 与会话密钥 |
+| `SESSION_SECRET` | 启用登录时必填，至少 32 字符的随机会话签名密钥 |
+| `UPSTASH_REDIS_REST_URL` | 可选 Upstash Redis HTTPS REST URL |
+| `UPSTASH_REDIS_REST_TOKEN` | 可选 Redis REST token，必须与 REST URL 成对设置 |
+| `BWG_VEID` | 可选固定目标 VEID；使用服务端凭证时必须启用面板登录 |
+| `BWG_API_KEY` | 固定目标的 API Key，必须与 VEID 同时设置并启用面板登录 |
 
-`.env.example` 只包含变量名。真实值放在 Vercel 环境变量或本地被忽略的 `.env.local`。
-Preview 必须使用它自己的固定 origin 与凭证配置；动态预览域名不自动获得访问权限。
-Redis 凭证缺失或限流服务故障时，公网请求会被拒绝，避免静默失去保护。
+`.env.example` 不包含真实值。需要配置时，真实值放在 Vercel 环境变量或本地
+被忽略的 `.env.local`。浏览器模式未指定 origin 时使用实际请求地址校验同源。
+启用登录的 Preview 必须使用自己的固定 origin；动态预览域名不自动获得访问权限。
+密码配置不完整或格式无效时拒绝访问，服务端 VPS 凭证不会自动退回无登录模式。
 
-登录会话使用 8 小时的 Secure、HttpOnly、SameSite=Strict Cookie。
+启用密码登录后，会话使用 8 小时的 Secure、HttpOnly、SameSite=Strict Cookie。
 修改 `SESSION_SECRET` 并重新部署会使现有会话失效；退出登录清除当前浏览器会话。
 已复制的会话令牌仍可用至过期，立即撤销需轮换会话密钥。
-采用单用户限流桶：登录 10 次/分钟、查询 60 次/分钟、管理操作 5 次/分钟。
-这是分布式请求频率限制，不保证不同页面的管理操作全局互斥或恰好执行一次。
+限流额度为登录 10 次/分钟、查询 60 次/分钟、管理操作 5 次/分钟。
+默认在每个运行实例内计数，重启会重置额度，不保证 Vercel 多实例间的全局限制。
+可选 Redis 提供分布式限流；部分配置、无效配置或已配置 Redis 故障时拒绝请求。
+两种方案都不保证不同页面的管理操作全局互斥或恰好执行一次。
 
-发布前检查域名、变量与 Redis 连通性，再验证匿名访问拒绝、正确密码登录和退出。
-本轮只生成、验证部署产物，没有自动发布线上版本。
+发布前验证所选模式：浏览器模式应直接显示凭证表单，密码模式应先登录。
+设置环境变量后需要重新部署；已连接 Vercel 的生产分支提交会触发自动部署。
 发生回归时使用 Vercel 的部署回滚；保留登录保护，必要时先关闭面板入口。
 
 ## 凭证与操作
 
 设置 `BWG_VEID` 与 `BWG_API_KEY` 后，客户端只取得 VEID，API 固定访问该目标。
 API Key 不写入 HTML、客户端构建产物、错误响应或日志。
-没有服务端凭证时，页面允许输入凭证，默认仅保存在内存。
-“在此设备保存”会将 API Key 明文保存到当前浏览器，退出登录保留这个主动选择。
+没有服务端凭证时，页面允许手动输入凭证，默认勾选“在此设备保存”。
+验证成功后将 API Key 明文保存到当前浏览器，可取消勾选改为只使用内存。
+断开连接或退出登录保留已保存的配置；清除配置需要单独确认。
 旧版保存的配置不会自动发起请求，须明确复用或删除。
 清除本机配置不会撤销服务商 API Key；需要撤销时应在 KiwiVM 控制台重置密钥。
 

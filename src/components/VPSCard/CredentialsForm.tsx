@@ -91,7 +91,7 @@ export function CredentialsForm(props: FormProps) {
       <form onSubmit={submit} className="space-y-5">
         <CredentialFields initial={props.initial} saving={props.saving} />
         <label className="flex items-start gap-3 text-sm">
-          <input type="checkbox" name="remember" disabled={props.saving}
+          <input type="checkbox" name="remember" defaultChecked disabled={props.saving}
             className="mt-1 h-4 w-4 accent-primary" />
           <span>在此设备保存 API Key
             <span className="mt-1 block text-default-600">

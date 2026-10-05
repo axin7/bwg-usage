@@ -5,7 +5,8 @@ import {
   type SecurityEnvironmentReader,
 } from './security-env';
 import { checkDistributedLimit, type RateChecker } from './security-limit';
-import { readPanelConfig, readSessionToken, verifySession } from './security-session';
+import { readSessionToken, verifySession } from './security-session';
+import { readAccessConfig } from './security-config';
 import { SecurityError } from './security-error';
 
 export { SecurityError } from './security-error';
@@ -23,8 +24,10 @@ export interface SecurityDependencies {
 
 export function assertRequestBoundary(request: Request, env: SecurityEnvironment): void {
   const local = isLocalDevelopment(request, env);
-  const actualOrigin = new URL(request.url).origin;
-  const expected = local ? actualOrigin : readPanelConfig(env).origin;
+  const url = new URL(request.url);
+  const actualOrigin = url.origin;
+  const expected = local ? actualOrigin : readAccessConfig(env).origin ?? actualOrigin;
+  if (!local && url.protocol !== 'https:') throw invalidOrigin();
   if (!local && actualOrigin !== expected) throw invalidOrigin();
   if (request.method !== 'POST') return;
   const origin = request.headers.get('origin');
@@ -49,10 +52,12 @@ function createAccessGuard(deps: SecurityDependencies): AccessGuard {
     const cached = identities.get(request);
     if (cached) return cached;
     if (isLocalDevelopment(request, env)) return { isLocal: true };
+    const config = readAccessConfig(env).panel;
+    if (!config) return { isLocal: false };
     const token = readSessionToken(request);
     if (!token) throw accessDenied();
     try {
-      await verifySession(token, readPanelConfig(env));
+      await verifySession(token, config);
       const identity = { isLocal: false };
       identities.set(request, identity);
       return identity;

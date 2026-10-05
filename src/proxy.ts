@@ -1,16 +1,30 @@
-import { assertRequestAccess, SecurityError } from '@/lib/server/security';
+import {
+  assertRequestAccess, assertRequestBoundary, SecurityError,
+} from '@/lib/server/security';
+import { readAccessConfig } from '@/lib/server/security-config';
+import { readSecurityEnvironment } from '@/lib/server/security-env';
 import { securityHeaders } from '@/lib/security-headers';
+
+function redirectResponse(location: string): Response {
+  return new Response(null, {
+    status: 303,
+    headers: { ...securityHeaders, Location: location, 'Cache-Control': 'private, no-store' },
+  });
+}
 
 export async function proxy(request: Request) {
   try {
+    if (new URL(request.url).pathname === '/login') {
+      const env = await readSecurityEnvironment();
+      assertRequestBoundary(request, env);
+      if (!readAccessConfig(env).panel) return redirectResponse('/');
+      return;
+    }
     await assertRequestAccess(request);
   } catch (error) {
     if (error instanceof SecurityError && error.status === 401
       && new URL(request.url).pathname === '/') {
-      return new Response(null, {
-        status: 303,
-        headers: { ...securityHeaders, Location: '/login', 'Cache-Control': 'private, no-store' },
-      });
+      return redirectResponse('/login');
     }
     const requestId = crypto.randomUUID();
     const status = error instanceof SecurityError ? error.status : 503;
@@ -24,4 +38,4 @@ export async function proxy(request: Request) {
   }
 }
 
-export const config = { matcher: ['/', '/api/vps/:path*'] };
+export const config = { matcher: ['/', '/login', '/api/vps/:path*'] };

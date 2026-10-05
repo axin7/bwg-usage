@@ -1,9 +1,12 @@
 import { VPSCard } from '@/components/VPSCard';
 import { getServerVEID } from '@/lib/server/vps-credentials';
+import { readAccessConfig } from '@/lib/server/security-config';
+import { readSecurityEnvironment } from '@/lib/server/security-env';
 
 export const dynamic = 'force-dynamic';
 
-export default function Home() {
+export default async function Home() {
+  const authEnabled = Boolean(readAccessConfig(await readSecurityEnvironment()).panel);
   let serverVEID: string | null;
   try {
     serverVEID = getServerVEID();
@@ -15,7 +18,7 @@ export default function Home() {
   }
   return (
     <main className="min-h-screen bg-background py-6 sm:py-10">
-      <VPSCard serverVEID={serverVEID} />
+      <VPSCard serverVEID={serverVEID} authEnabled={authEnabled} />
     </main>
   );
 }

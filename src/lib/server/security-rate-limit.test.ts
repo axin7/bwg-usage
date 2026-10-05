@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createRequestSecurity } from './security';
 import { checkDistributedLimit } from './security-limit';
 import { panelRequest, PUBLIC_ENV, signPanelToken } from './security-test-fixtures';
@@ -13,7 +13,13 @@ vi.mock('@upstash/ratelimit', () => ({
 }));
 
 beforeEach(() => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date('2026-10-05T00:00:00Z'));
   sdkLimit.mockResolvedValue({ success: true, reset: Date.now() + 60_000 });
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 describe('distributed personal panel limits', () => {
@@ -48,6 +54,34 @@ describe('distributed personal panel limits', () => {
   });
 });
 
+describe('optional Redis configuration', () => {
+  const memoryEnv = {
+    ...PUBLIC_ENV,
+    UPSTASH_REDIS_REST_URL: undefined,
+    UPSTASH_REDIS_REST_TOKEN: undefined,
+  };
+
+  it('uses process-local limits without making SDK calls when both variables are absent',
+    async () => {
+      await expect(checkDistributedLimit('query', memoryEnv)).resolves.toBeUndefined();
+      expect(sdkLimit).not.toHaveBeenCalled();
+    });
+
+  it('applies and resets the local login allowance with no configured store', async () => {
+    const env = { ...memoryEnv, APP_ORIGIN: 'https://local-limit-test.example.com' };
+    for (let index = 0; index < 10; index += 1) {
+      await checkDistributedLimit('login', env);
+    }
+    await expect(checkDistributedLimit('login', env)).rejects.toMatchObject({
+      status: 429, code: 'RATE_LIMITED', retryAfter: 60,
+    });
+    await expect(checkDistributedLimit('action', env)).resolves.toBeUndefined();
+    vi.advanceTimersByTime(60_000);
+    await expect(checkDistributedLimit('login', env)).resolves.toBeUndefined();
+    expect(sdkLimit).not.toHaveBeenCalled();
+  });
+});
+
 describe('Upstash limiter failure handling', () => {
   it('checks the shared personal-panel identifier through the SDK', async () => {
     await expect(checkDistributedLimit('query', PUBLIC_ENV)).resolves.toBeUndefined();
@@ -57,7 +91,10 @@ describe('Upstash limiter failure handling', () => {
   it.each([
     { UPSTASH_REDIS_REST_URL: '' },
     { UPSTASH_REDIS_REST_TOKEN: '' },
+    { UPSTASH_REDIS_REST_URL: 'invalid-url' },
     { UPSTASH_REDIS_REST_URL: 'http://test-only-redis.example.com' },
+    { UPSTASH_REDIS_REST_URL: 'https://user:password@test-only-redis.example.com' },
+    { UPSTASH_REDIS_REST_URL: 'https://test-only-redis.example.com/#fragment' },
   ])('fails closed for missing or invalid store configuration %j', async (override) => {
     await expect(checkDistributedLimit('login', { ...PUBLIC_ENV, ...override }))
       .rejects.toMatchObject({ status: 503, code: 'RATE_LIMIT_UNAVAILABLE' });

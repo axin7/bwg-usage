@@ -34,18 +34,68 @@ async function assertResponse(app, path, options, status, expectedCode) {
   return response;
 }
 
+async function checkBrowserMode(app, transport) {
+  const shell = await assertResponse(app, '/', {}, 200);
+  const html = await shell.text();
+  expect(html.includes('name="veid"') && html.includes('name="apiKey"'),
+    'zero-environment credential SSR inputs');
+  expect(shell.headers.get('x-frame-options') === 'DENY', 'browser-mode security headers');
+  expect(shell.headers.has('content-security-policy'), 'browser-mode root CSP');
+  const login = await assertResponse(app, '/login', {}, 303);
+  expect(login.headers.get('location') === '/', 'browser mode does not require login');
+  for (const path of ['/api/vps/info', '/api/vps/history', '/api/vps/events']) {
+    await assertResponse(app, path, {
+      method: 'POST', headers: jsonHeaders, body: '{}',
+    }, 400, 'INVALID_INPUT');
+    await assertResponse(app, path, {
+      method: 'POST', headers: { ...jsonHeaders, Origin: 'https://other.example.com' },
+      body: '{}',
+    }, 403, 'INVALID_ORIGIN');
+  }
+  await assertResponse(app, '/api/vps/info', {
+    method: 'POST', headers: { Origin: origin }, body: '{}',
+  }, 415, 'UNSUPPORTED_MEDIA_TYPE');
+  process.env.APP_ORIGIN = 'https://other.example.com';
+  await assertResponse(app, '/', {}, 403, 'INVALID_ORIGIN');
+  delete process.env.APP_ORIGIN;
+  expect(transport.calls.length === 0, 'browser mode requires no Redis request');
+}
+
+async function checkConfigurationFailures(app, transport) {
+  const cases = [
+    { PANEL_PASSWORD: password },
+    { SESSION_SECRET: secret },
+    { BWG_VEID: '123456' },
+    { BWG_API_KEY: 'unprotected-provider-secret' },
+    { BWG_VEID: '123456', BWG_API_KEY: 'unprotected-provider-secret' },
+    { APP_ORIGIN: 'http://panel.example.com' },
+    { APP_ORIGIN: origin, PANEL_PASSWORD: password, SESSION_SECRET: 'too-short' },
+  ];
+  for (const values of cases) {
+    configure();
+    Object.assign(process.env, values);
+    const refusal = await assertResponse(app, '/', {}, 503, 'SECURITY_NOT_CONFIGURED');
+    expect(refusal.headers.get('x-frame-options') === 'DENY', 'refusal security headers');
+    const response = await assertResponse(app, '/api/vps/info', {
+      method: 'POST', headers: jsonHeaders, body: '{}',
+    }, 503);
+    const body = await response.text();
+    expect(JSON.parse(body).error.code === 'SECURITY_NOT_CONFIGURED',
+      'unprotected provider rejects before any request');
+    expect(!body.includes('unprotected-provider-secret'),
+      'unprotected server key absent from refusal');
+  }
+  configure();
+  expect(transport.calls.length === 0, 'invalid configuration creates no Redis request');
+}
+
 async function checkProtection(app) {
-  const missing = await assertResponse(app, '/', {}, 503, 'SECURITY_NOT_CONFIGURED');
-  expect(missing.headers.get('x-frame-options') === 'DENY', 'refusal security headers');
   Object.assign(process.env, {
     APP_ORIGIN: origin, PANEL_PASSWORD: password, SESSION_SECRET: secret,
   });
   const anonymous = await assertResponse(app, '/', {}, 303);
   expect(anonymous.headers.get('location') === '/login', 'anonymous login redirect');
   await assertResponse(app, '/', { headers: { cookie: `${cookieName}=forged` } }, 303);
-  await assertResponse(app, '/api/auth/login', {
-    method: 'POST', headers: jsonHeaders, body: JSON.stringify({ password }),
-  }, 503, 'RATE_LIMIT_UNAVAILABLE');
   for (const path of ['/api/vps/info', '/api/vps/history', '/api/vps/events']) {
     await assertResponse(app, path, {
       method: 'POST', headers: jsonHeaders, body: '{}',
@@ -53,8 +103,9 @@ async function checkProtection(app) {
   }
 }
 
-async function checkLogin(app, transport) {
-  Object.assign(process.env, redisEnvironment);
+async function checkLogin(app, transport, useRedis) {
+  if (useRedis) Object.assign(process.env, redisEnvironment);
+  const count = transport.calls.length;
   const rejected = await assertResponse(app, '/api/auth/login', {
     method: 'POST', headers: jsonHeaders, body: JSON.stringify({ password: 'incorrect' }),
   }, 401, 'ACCESS_DENIED');
@@ -77,8 +128,9 @@ async function checkLogin(app, transport) {
     });
   expect(payload.sub === 'panel-owner' && payload.exp - payload.iat === 28_800,
     'compiled login signature and eight-hour claims');
-  expect(transport.calls.length === 2 && transport.calls.every(({ scope }) => scope === 'login'),
-    'compiled password attempts use distributed login limiter');
+  const calls = transport.calls.slice(count);
+  expect(useRedis ? calls.length === 2 && calls.every(({ scope }) => scope === 'login') :
+    calls.length === 0, 'compiled login uses the selected limiter');
   return cookie;
 }
 
@@ -100,7 +152,22 @@ async function checkAuthenticatedBoundaries(app, cookie, transport) {
   delete process.env.UPSTASH_REDIS_REST_TOKEN;
   await assertResponse(app, '/api/vps/info', {
     method: 'POST', headers: { ...jsonHeaders, cookie }, body: '{}',
-  }, 503, 'RATE_LIMIT_UNAVAILABLE');
+  }, 400, 'INVALID_INPUT');
+  expect(transport.calls.length === calls, 'local query limit creates no Redis request');
+  for (const values of [
+    { UPSTASH_REDIS_REST_URL: redisEnvironment.UPSTASH_REDIS_REST_URL },
+    { UPSTASH_REDIS_REST_TOKEN: redisEnvironment.UPSTASH_REDIS_REST_TOKEN },
+    { UPSTASH_REDIS_REST_URL: 'http://offline-redis.invalid',
+      UPSTASH_REDIS_REST_TOKEN: redisEnvironment.UPSTASH_REDIS_REST_TOKEN },
+  ]) {
+    delete process.env.UPSTASH_REDIS_REST_URL;
+    delete process.env.UPSTASH_REDIS_REST_TOKEN;
+    Object.assign(process.env, values);
+    await assertResponse(app, '/api/vps/info', {
+      method: 'POST', headers: { ...jsonHeaders, cookie }, body: '{}',
+    }, 503, 'RATE_LIMIT_UNAVAILABLE');
+  }
+  expect(transport.calls.length === calls, 'invalid Redis configuration creates no request');
   Object.assign(process.env, redisEnvironment);
 }
 
@@ -188,9 +255,12 @@ configure();
 const transport = createOfflineRedisTransport();
 globalThis.fetch = transport.fetch;
 const app = (await import('../.vercel/output/functions/__server.func/index.mjs')).default;
+await checkBrowserMode(app, transport);
+await checkConfigurationFailures(app, transport);
 await checkProtection(app);
-expect(transport.calls.length === 0, 'missing configuration creates no Redis request');
-const cookie = await checkLogin(app, transport);
+const localCookie = await checkLogin(app, transport, false);
+await checkLogout(app, localCookie, transport);
+const cookie = await checkLogin(app, transport, true);
 await checkAuthenticatedBoundaries(app, cookie, transport);
 await checkRendering(app, cookie);
 await checkRateFailures(app, cookie, transport);
@@ -199,4 +269,4 @@ await checkClientSecrets('.vercel/output/static');
 await transport.settle();
 expect(transport.protocolErrors === 0, 'offline Redis protocol matches the actual SDK');
 expect(transport.unexpectedCalls === 0, 'no real Redis or VPS calls');
-console.log('Vercel compiled integration passed: login, logout, rate failures, SSR, secrets.');
+console.log('Vercel integration passed: browser credentials, optional Redis, auth, secrets.');

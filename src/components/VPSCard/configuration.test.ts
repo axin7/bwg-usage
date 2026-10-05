@@ -29,6 +29,40 @@ test('legacy storage requires an explicit reuse and retention decision', async (
   expect(localStorage.getItem('vps_credentials_v2')).toBeNull();
 });
 
+test('current saved credentials stay idle until reuse and explicit verification', async () => {
+  localStorage.setItem('vps_credentials_v2', JSON.stringify(CREDENTIALS));
+  const { result } = renderHook(useVPSController);
+  expect(result.current.session.stored?.credentials).toEqual(CREDENTIALS);
+  expect(result.current.session.credentials).toBeNull();
+  expect(fetchVPSData).not.toHaveBeenCalled();
+  act(() => result.current.configuration.reuse());
+  expect(result.current.session.reuse).toEqual(CREDENTIALS);
+  expect(fetchVPSData).not.toHaveBeenCalled();
+  await act(async () => { await result.current.configuration.save(CREDENTIALS, true); });
+  expect(result.current.session.credentials).toEqual(CREDENTIALS);
+  expect(loadSavedCredentials().credentials).toEqual(CREDENTIALS);
+});
+
+test('verified legacy reuse migrates the saved configuration to current browser storage',
+  async () => {
+    localStorage.setItem('vps_credentials', JSON.stringify(CREDENTIALS));
+    const { result } = renderHook(useVPSController);
+    act(() => result.current.configuration.reuse());
+    await act(async () => { await result.current.configuration.save(CREDENTIALS, true); });
+    expect(localStorage.getItem('vps_credentials')).toBeNull();
+    expect(loadSavedCredentials()).toMatchObject({ credentials: CREDENTIALS, legacy: false });
+  });
+
+test('opting out clears saved credentials while retaining the active connection', async () => {
+  localStorage.setItem('vps_credentials_v2', JSON.stringify(CREDENTIALS));
+  localStorage.setItem('vps_credentials', JSON.stringify(CREDENTIALS));
+  const { result } = renderHook(useVPSController);
+  await connect(result);
+  expect(localStorage.getItem('vps_credentials_v2')).toBeNull();
+  expect(localStorage.getItem('vps_credentials')).toBeNull();
+  expect(result.current.session.credentials).toEqual(CREDENTIALS);
+});
+
 test('denied persistence still connects in memory and reports the storage failure', async () => {
   const { result } = renderHook(useVPSController);
   vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
@@ -82,6 +116,17 @@ test('disconnect clears runtime memory while preserving explicitly retained stor
   expect(result.current.session.credentials).toBeNull();
   expect(result.current.reads.data).toBeNull();
   expect(localStorage.getItem('vps_credentials_v2')).not.toBeNull();
+  expect(result.current.session.stored?.credentials).toEqual(CREDENTIALS);
+  expect(result.current.session.reuse).toBeNull();
+});
+
+test('reset clears the active connection and retained browser credentials', async () => {
+  const { result } = renderHook(useVPSController);
+  await act(async () => { await result.current.configuration.save(CREDENTIALS, true); });
+  act(() => result.current.configuration.reset());
+  expect(result.current.session.credentials).toBeNull();
+  expect(result.current.reads.data).toBeNull();
+  expect(localStorage.getItem('vps_credentials_v2')).toBeNull();
 });
 
 test('an empty v2 record keeps legacy secrets visible for explicit removal', () => {

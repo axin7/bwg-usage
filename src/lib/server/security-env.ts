@@ -5,6 +5,8 @@ export interface SecurityEnvironment {
   APP_ORIGIN?: string;
   UPSTASH_REDIS_REST_URL?: string;
   UPSTASH_REDIS_REST_TOKEN?: string;
+  BWG_VEID?: string;
+  BWG_API_KEY?: string;
 }
 
 export type SecurityEnvironmentReader = () => Promise<SecurityEnvironment>;

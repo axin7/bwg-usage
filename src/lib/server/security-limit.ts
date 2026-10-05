@@ -3,12 +3,14 @@ import { Redis } from '@upstash/redis';
 import { Ratelimit } from '@upstash/ratelimit';
 import type { SecurityEnvironment } from './security-env';
 import { SecurityError } from './security-error';
+import { createMemoryRateChecker } from './security-memory-limit';
 
 export type RateScope = 'login' | 'query' | 'action';
 export type RateChecker = (scope: RateScope, env: SecurityEnvironment) => Promise<void>;
 
 const LIMITS: Record<RateScope, number> = { login: 10, query: 60, action: 5 };
 const limiters = new Map<string, Ratelimit>();
+const checkMemoryLimit = createMemoryRateChecker(LIMITS);
 
 function unavailable(): SecurityError {
   return new SecurityError(503, 'RATE_LIMIT_UNAVAILABLE', '请求保护暂时不可用。');
@@ -52,6 +54,9 @@ function getLimiter(scope: RateScope, env: SecurityEnvironment): Ratelimit {
 }
 
 export const checkDistributedLimit: RateChecker = async (scope, env) => {
+  if (!env.UPSTASH_REDIS_REST_URL && !env.UPSTASH_REDIS_REST_TOKEN) {
+    return checkMemoryLimit(scope, env);
+  }
   let result: Awaited<ReturnType<Ratelimit['limit']>>;
   try {
     result = await getLimiter(scope, env).limit('panel');

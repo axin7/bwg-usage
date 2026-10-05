@@ -9,7 +9,7 @@ import { ErrorMessage, IconButton } from './controls';
 import { formatDate, VPSOverview } from './VPSOverview';
 import { ACTION_LABELS } from './actionState';
 import { useVPSController, type VPSController } from './useVPSController';
-import { LogoutButton } from './LogoutButton';
+import { ConnectionExitButton } from './ConnectionExitButton';
 import { DashboardTabs } from './DashboardTabs';
 import { SystemOverview } from './SystemOverview';
 
@@ -18,7 +18,9 @@ const ActionDialog = lazy(() => import('./ActionDialog')
 const ResetDialog = lazy(() => import('./ActionDialog')
   .then((module) => ({ default: module.ResetDialog })));
 
-function Toolbar({ controller, onReset }: { controller: VPSController; onReset: () => void }) {
+function Toolbar({ controller, onReset, authEnabled }: {
+  controller: VPSController; onReset: () => void; authEnabled: boolean;
+}) {
   const { session, reads, configuration, actions } = controller;
   const [logoutError, setLogoutError] = useState<ApiError | null>(null);
   return (
@@ -50,7 +52,8 @@ function Toolbar({ controller, onReset }: { controller: VPSController; onReset: 
           ? <IconButton label="清除配置" onPress={onReset}>
           <Trash2 size={18} aria-hidden="true" />
         </IconButton> : null}
-        {session.credentials ? <LogoutButton onDisconnected={() => {
+        {session.credentials ? <ConnectionExitButton authEnabled={authEnabled}
+          onDisconnected={() => {
           actions.close(); configuration.disconnect();
         }} onError={setLogoutError} /> : null}
       </div>
@@ -129,7 +132,9 @@ function SavedLocalConfiguration({ controller }: { controller: VPSController }) 
   </div>;
 }
 
-export function VPSCard({ serverVEID = null }: { serverVEID?: string | null } = {}) {
+export function VPSCard({ serverVEID = null, authEnabled = true }: {
+  serverVEID?: string | null; authEnabled?: boolean;
+} = {}) {
   const controller = useVPSController(serverVEID);
   const [resetOpen, setResetOpen] = useState(false);
   const { session, configuration, actions, reads } = controller;
@@ -138,7 +143,8 @@ export function VPSCard({ serverVEID = null }: { serverVEID?: string | null } = 
   };
   return (
     <section className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6">
-      <Toolbar controller={controller} onReset={() => setResetOpen(true)} />
+      <Toolbar controller={controller} onReset={() => setResetOpen(true)}
+        authEnabled={authEnabled} />
       <SavedLocalConfiguration controller={controller} />
       {session.notice ? <p role="status" className="mb-4 break-words text-sm text-warning-700">
         {session.notice}

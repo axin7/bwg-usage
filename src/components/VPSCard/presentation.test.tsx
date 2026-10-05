@@ -10,6 +10,12 @@ import { CREDENTIALS, dataFixture } from './testHelpers';
 
 beforeEach(() => { localStorage.clear(); });
 
+function formProps() {
+  return { initial: null, stored: null, saving: false, error: null, canCancel: false,
+    onSubmit: vi.fn().mockResolvedValue(undefined), onCancel: vi.fn(),
+    onReuse: vi.fn(), onRemoveSaved: vi.fn() };
+}
+
 test('server rendering includes useful configuration and no stored secret', () => {
   localStorage.setItem('vps_credentials', JSON.stringify(CREDENTIALS));
   const html = renderToString(<HeroUIProvider disableAnimation><VPSCard /></HeroUIProvider>);
@@ -40,16 +46,36 @@ test('over-quota percentage is truthful while progress geometry is clamped', () 
   expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuetext', '已使用 120%');
 });
 
-test('configuration validation errors retain entered values and the unchecked retention choice',
+test('configuration defaults to browser persistence and keeps the API key masked', () => {
+  const props = formProps();
+  render(<HeroUIProvider disableAnimation><CredentialsForm {...props} />
+  </HeroUIProvider>);
+  expect(screen.getByRole('checkbox')).toBeChecked();
+  expect(screen.getByLabelText('API Key')).toHaveAttribute('type', 'password');
+  fireEvent.change(screen.getByLabelText('VEID'), { target: { value: CREDENTIALS.veid } });
+  fireEvent.change(screen.getByLabelText('API Key'), { target: { value: CREDENTIALS.apiKey } });
+  fireEvent.submit(screen.getByRole('button', { name: '验证并连接' }).closest('form')!);
+  expect(props.onSubmit).toHaveBeenCalledWith(CREDENTIALS, true);
+});
+
+test('configuration lets the user submit without retaining browser credentials', () => {
+  const props = { ...formProps(), initial: CREDENTIALS };
+  render(<HeroUIProvider disableAnimation><CredentialsForm {...props} />
+  </HeroUIProvider>);
+  fireEvent.click(screen.getByRole('checkbox'));
+  fireEvent.submit(screen.getByRole('button', { name: '验证并连接' }).closest('form')!);
+  expect(props.onSubmit).toHaveBeenCalledWith(CREDENTIALS, false);
+});
+
+test('configuration validation errors retain entered values and an explicit persistence opt-out',
   () => {
-    const props = { initial: null, stored: null, saving: false, error: null, canCancel: false,
-      onSubmit: vi.fn().mockResolvedValue(undefined), onCancel: vi.fn(),
-      onReuse: vi.fn(), onRemoveSaved: vi.fn() };
+    const props = formProps();
     const { rerender } = render(<HeroUIProvider disableAnimation>
       <CredentialsForm {...props} />
     </HeroUIProvider>);
     fireEvent.change(screen.getByLabelText('VEID'), { target: { value: '9999' } });
     fireEvent.change(screen.getByLabelText('API Key'), { target: { value: 'candidate-secret' } });
+    fireEvent.click(screen.getByRole('checkbox'));
     const error = new ApiError({ code: 'INVALID_KEY', message: '密钥无效', requestId: 'form-1' });
     rerender(<HeroUIProvider disableAnimation><CredentialsForm {...props} error={error} />
     </HeroUIProvider>);
