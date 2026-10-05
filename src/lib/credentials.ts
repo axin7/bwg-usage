@@ -2,6 +2,7 @@ import type { VPSCredentials } from '@/types';
 
 const STORAGE_KEY = 'vps_credentials_v2';
 const LEGACY_KEY = 'vps_credentials';
+const DISCONNECTED_KEY = 'vps_connection_disconnected';
 
 export interface SavedCredentials {
   credentials: VPSCredentials | null;
@@ -40,6 +41,7 @@ export function persistCredentials(credentials: VPSCredentials, remember: boolea
     if (remember) localStorage.setItem(STORAGE_KEY, JSON.stringify(credentials));
     else localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(LEGACY_KEY);
+    sessionStorage.removeItem(DISCONNECTED_KEY);
     return null;
   } catch {
     return remember ? '浏览器未能完整保存或清理配置，请检查本站存储。当前会话仍可连接。'
@@ -51,8 +53,27 @@ export function clearSavedCredentials(): string | null {
   try {
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(LEGACY_KEY);
+    sessionStorage.removeItem(DISCONNECTED_KEY);
     return null;
   } catch {
     return '浏览器未能清除已保存的密钥，请在浏览器设置中清除本站数据。';
+  }
+}
+
+export function shouldRestoreCredentials(stored: SavedCredentials): boolean {
+  if (!stored.credentials || stored.legacy) return false;
+  try {
+    return sessionStorage.getItem(DISCONNECTED_KEY) !== '1';
+  } catch {
+    return false;
+  }
+}
+
+export function preventCredentialRestore(): string | null {
+  try {
+    sessionStorage.setItem(DISCONNECTED_KEY, '1');
+    return null;
+  } catch {
+    return '浏览器未能保存断开状态，刷新后可能会重新连接。';
   }
 }

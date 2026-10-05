@@ -12,6 +12,7 @@ vi.mock('@/lib/api', async (original) => ({
 
 beforeEach(() => {
   prepareControllerTest();
+  sessionStorage.clear();
   vi.mocked(fetchVPSData).mockReset().mockResolvedValue(dataFixture());
 });
 
@@ -29,17 +30,17 @@ test('legacy storage requires an explicit reuse and retention decision', async (
   expect(localStorage.getItem('vps_credentials_v2')).toBeNull();
 });
 
-test('current saved credentials stay idle until reuse and explicit verification', async () => {
+test('current saved credentials reconnect after a fresh verification on mount', async () => {
   localStorage.setItem('vps_credentials_v2', JSON.stringify(CREDENTIALS));
   const { result } = renderHook(useVPSController);
   expect(result.current.session.stored?.credentials).toEqual(CREDENTIALS);
   expect(result.current.session.credentials).toBeNull();
-  expect(fetchVPSData).not.toHaveBeenCalled();
-  act(() => result.current.configuration.reuse());
-  expect(result.current.session.reuse).toEqual(CREDENTIALS);
-  expect(fetchVPSData).not.toHaveBeenCalled();
-  await act(async () => { await result.current.configuration.save(CREDENTIALS, true); });
+  await act(async () => {});
+  expect(fetchVPSData).toHaveBeenCalledOnce();
+  expect(vi.mocked(fetchVPSData).mock.calls[0]?.[1]?.live).toBe(true);
   expect(result.current.session.credentials).toEqual(CREDENTIALS);
+  expect(result.current.session.editing).toBe(false);
+  expect(result.current.reads.data?.basic.hostname).toBe('test-vps');
   expect(loadSavedCredentials().credentials).toEqual(CREDENTIALS);
 });
 

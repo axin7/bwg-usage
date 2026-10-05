@@ -60,8 +60,8 @@ function SavedConfiguration({ stored, saving, onReuse, onRemoveSaved }: Pick<For
   if (!stored?.exists) return null;
   return (
     <div className="mb-6 border-l-2 border-warning bg-warning-50 p-4 text-sm">
-      <p>{stored.legacy ? '发现旧版保存的配置。' : '此浏览器中存在保存的配置。'}
-        使用前请确认是否继续保留密钥。</p>
+      <p>{stored.legacy ? '发现旧版保存的配置。使用前请确认是否继续保留密钥。'
+        : saving ? '正在验证连接配置。' : '此浏览器中存在保存的配置。'}</p>
       <div className="mt-3 flex flex-wrap gap-2">
         {stored.credentials ? <Button size="sm" radius="sm" variant="flat"
           isDisabled={saving} onPress={onReuse}
@@ -85,7 +85,8 @@ export function CredentialsForm(props: FormProps) {
     void props.onSubmit({ veid: value('veid'), apiKey: value('apiKey') }, form.has('remember'));
   };
   return (
-    <section aria-labelledby="configuration-heading" className="border-y border-default-200 py-6">
+    <section aria-labelledby="configuration-heading" aria-busy={props.saving}
+      className="border-y border-default-200 py-6">
       <h2 id="configuration-heading" className="mb-5 text-lg font-semibold">连接配置</h2>
       <SavedConfiguration {...props} />
       <form onSubmit={submit} className="space-y-5">

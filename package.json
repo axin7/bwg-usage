@@ -33,6 +33,7 @@
   },
   "dependencies": {
     "@heroui/react": "2.8.10",
+    "@heroui/theme": "2.4.26",
     "@upstash/ratelimit": "2.2.0",
     "@upstash/redis": "1.39.0",
     "framer-motion": "14.0.0",
