@@ -59,7 +59,7 @@
     "react-dom": "19.3.0",
     "react-server-dom-webpack": "19.3.0",
     "recharts": "3.10.1",
-    "vinext": "1.0.1"
+    "vinext": "1.1.0"
   },
   "devDependencies": {
     "@tailwindcss/vite": "4.3.3",
